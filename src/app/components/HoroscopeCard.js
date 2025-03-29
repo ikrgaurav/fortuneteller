@@ -6,6 +6,7 @@ export default function HoroscopeCard({ userData, onBack }) {
   const [horoscope, setHoroscope] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [show, setShow] = useState(true);
 
   const fetchHoroscope = async () => {
     try {
@@ -22,8 +23,10 @@ export default function HoroscopeCard({ userData, onBack }) {
   };
 
   useEffect(() => {
-    fetchHoroscope();
-  }, [userData.sign, userData.name]);
+    if (show) {
+      fetchHoroscope();
+    }
+  }, [show, fetchHoroscope]);
 
   if (loading) {
     return (

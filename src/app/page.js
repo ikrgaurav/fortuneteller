@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import UserForm from "./components/UserForm";
@@ -23,56 +23,57 @@ const YouTubeBackground = () => {
   );
 };
 
+// Main page component
 export default function Home() {
-  const searchParams = useSearchParams();
+  return (
+    <Suspense fallback={<div className="neon-text-white">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+// Content component that uses hooks
+function HomeContent() {
   const [userData, setUserData] = useState(null);
   const [currentView, setCurrentView] = useState("form"); // form, options, regular, mystery
+  const searchParams = useSearchParams();
 
-  // Check if returning from character page or URL parameters
   useEffect(() => {
-    // Check for return from character page
+    // Check if we're returning from a character page
     const returnToOptions = sessionStorage.getItem("returnToOptions");
 
-    // Try to load user data
-    let loadedUserData = null;
-    try {
-      const savedData = localStorage.getItem("fortuneUserData");
-      if (savedData) {
-        loadedUserData = JSON.parse(savedData);
-        setUserData(loadedUserData);
+    // Load userData from localStorage if returning from character page
+    if (returnToOptions === "true") {
+      try {
+        const savedUserData = localStorage.getItem("fortuneUserData");
+        if (savedUserData) {
+          setUserData(JSON.parse(savedUserData));
+          setCurrentView("options");
+        }
+        // Clear the flag
+        sessionStorage.removeItem("returnToOptions");
+      } catch (err) {
+        console.error("Error loading userData from localStorage:", err);
       }
-    } catch (e) {
-      console.error("Failed to load user data from localStorage", e);
     }
 
-    // If returning from character page, show options view
-    if (returnToOptions === "true" && loadedUserData) {
+    // Check URL parameters
+    const viewParam = searchParams.get("view");
+    if (viewParam === "options" && userData) {
       setCurrentView("options");
-      // Clear the flag
-      sessionStorage.removeItem("returnToOptions");
     }
-    // Otherwise check URL parameters
-    else {
-      const viewParam = searchParams.get("view");
-      if (viewParam === "options" && (loadedUserData || userData)) {
-        setCurrentView("options");
-      }
-    }
-  }, [searchParams]);
+  }, [searchParams, userData]);
 
-  const handleFormSubmit = (data) => {
-    // Save user data to localStorage
-    try {
-      localStorage.setItem("fortuneUserData", JSON.stringify(data));
-    } catch (e) {
-      console.error("Failed to save user data to localStorage", e);
-    }
-
-    setUserData(data);
+  const handleFormSubmit = (formData) => {
+    setUserData(formData);
     setCurrentView("options");
 
-    // Prefetch and cache both character responses in the background
-    prefetchHoroscopes(data);
+    // Save to localStorage for persistence
+    try {
+      localStorage.setItem("fortuneUserData", JSON.stringify(formData));
+    } catch (err) {
+      console.error("Error saving to localStorage:", err);
+    }
   };
 
   // Function to prefetch both character responses in the background
@@ -118,16 +119,15 @@ export default function Home() {
 
   const handleBackClick = () => {
     if (currentView === "options") {
-      // Clear localStorage when going back to form
+      // When going back to form, clear localStorage
       try {
         localStorage.removeItem("fortuneUserData");
-      } catch (e) {
-        console.error("Failed to remove user data from localStorage", e);
+        setUserData(null);
+      } catch (err) {
+        console.error("Error removing userData from localStorage:", err);
       }
-
       setCurrentView("form");
-      setUserData(null);
-    } else if (currentView === "regular" || currentView === "mystery") {
+    } else {
       setCurrentView("options");
     }
   };
