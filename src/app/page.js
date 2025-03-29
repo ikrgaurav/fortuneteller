@@ -6,7 +6,13 @@ import UserForm from "./components/UserForm";
 import OptionSelector from "./components/OptionSelector";
 import HoroscopeCard from "./components/HoroscopeCard";
 import MysteryOption from "./components/MysteryOption";
-import { getHoroscope } from "./api/horoscopeService";
+import {
+  fetchAllHoroscopeData,
+  resetData,
+  isDataLoading,
+  getDataError,
+  isDataInitialized,
+} from "./api/dataStore";
 
 // YouTube Background Component
 const YouTubeBackground = () => {
@@ -36,6 +42,8 @@ export default function Home() {
 function HomeContent() {
   const [userData, setUserData] = useState(null);
   const [currentView, setCurrentView] = useState("form"); // form, options, regular, mystery
+  const [fetchingInitialData, setFetchingInitialData] = useState(false);
+  const [dataFetchError, setDataFetchError] = useState(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -47,7 +55,8 @@ function HomeContent() {
       try {
         const savedUserData = localStorage.getItem("fortuneUserData");
         if (savedUserData) {
-          setUserData(JSON.parse(savedUserData));
+          const parsedUserData = JSON.parse(savedUserData);
+          setUserData(parsedUserData);
           setCurrentView("options");
         }
         // Clear the flag
@@ -64,52 +73,26 @@ function HomeContent() {
     }
   }, [searchParams, userData]);
 
-  const handleFormSubmit = (formData) => {
+  // Handle form submission and data fetching
+  const handleFormSubmit = async (formData) => {
+    setFetchingInitialData(true);
+    setDataFetchError(null);
     setUserData(formData);
-    setCurrentView("options");
 
-    // Save to localStorage for persistence
     try {
+      // Save to localStorage for persistence
       localStorage.setItem("fortuneUserData", JSON.stringify(formData));
+
+      // Fetch all data at once
+      await fetchAllHoroscopeData(formData.sign, formData.name);
+
+      // Move to options view after data is fetched
+      setCurrentView("options");
     } catch (err) {
-      console.error("Error saving to localStorage:", err);
-    }
-  };
-
-  // Function to prefetch both character responses in the background
-  const prefetchHoroscopes = async (data) => {
-    if (!data || !data.sign) return;
-
-    const { name, sign } = data;
-
-    // Create cache keys for both character types
-    const motivatorCacheKey = `fortune_motivator_${name}_${sign}`;
-    const roasterCacheKey = `fortune_roaster_${name}_${sign}`;
-
-    // Check if we already have cached responses
-    const hasMotivatorCache = localStorage.getItem(motivatorCacheKey);
-    const hasRoasterCache = localStorage.getItem(roasterCacheKey);
-
-    // Make background API calls for any missing responses
-    try {
-      // Motivator horoscope
-      if (!hasMotivatorCache) {
-        console.log("Prefetching motivator horoscope in background");
-        const motivatorData = await getHoroscope(sign, name);
-        localStorage.setItem(motivatorCacheKey, JSON.stringify(motivatorData));
-        console.log("Motivator horoscope cached successfully");
-      }
-
-      // Roaster horoscope
-      if (!hasRoasterCache) {
-        console.log("Prefetching roaster horoscope in background");
-        const roasterData = await getHoroscope(sign, name);
-        localStorage.setItem(roasterCacheKey, JSON.stringify(roasterData));
-        console.log("Roaster horoscope cached successfully");
-      }
-    } catch (error) {
-      // We don't show errors to the user for background prefetching
-      console.error("Error prefetching horoscopes:", error);
+      console.error("Error fetching initial data:", err);
+      setDataFetchError("Failed to fetch your cosmic data. Please try again.");
+    } finally {
+      setFetchingInitialData(false);
     }
   };
 
@@ -119,9 +102,10 @@ function HomeContent() {
 
   const handleBackClick = () => {
     if (currentView === "options") {
-      // When going back to form, clear localStorage
+      // When going back to form, clear localStorage and reset data store
       try {
         localStorage.removeItem("fortuneUserData");
+        resetData();
         setUserData(null);
       } catch (err) {
         console.error("Error removing userData from localStorage:", err);
@@ -156,7 +140,19 @@ function HomeContent() {
       </header>
 
       <main className="w-full max-w-7xl mx-auto">
-        {currentView === "form" && <UserForm onSubmit={handleFormSubmit} />}
+        {currentView === "form" && (
+          <>
+            {dataFetchError && (
+              <div className="mb-6 p-5 glass-card bg-red-500/10 border border-red-500/30 rounded-lg text-center">
+                <p className="neon-text-white mb-4">{dataFetchError}</p>
+              </div>
+            )}
+            <UserForm
+              onSubmit={handleFormSubmit}
+              isLoading={fetchingInitialData}
+            />
+          </>
+        )}
 
         {currentView === "options" && userData && (
           <OptionSelector

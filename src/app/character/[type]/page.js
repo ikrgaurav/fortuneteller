@@ -2,7 +2,12 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getHoroscope } from "../../api/horoscopeService";
+import {
+  getStoredMotivatorData,
+  getStoredRoasterData,
+  isDataInitialized,
+  fetchAllHoroscopeData,
+} from "../../api/dataStore";
 
 // YouTube Background Component
 const YouTubeBackground = () => {
@@ -33,7 +38,6 @@ export default function CharacterPage() {
   const [animationDone, setAnimationDone] = useState(false);
   const contentRef = useRef(null);
   const timerRef = useRef(null);
-  const cacheKey = `fortune_${type}_${name}_${sign}`;
 
   // Get character info based on type
   const isMotivator = type === "motivator";
@@ -49,23 +53,31 @@ export default function CharacterPage() {
       try {
         setLoading(true);
 
-        // Check cache first
-        const cachedResponse = localStorage.getItem(cacheKey);
-        if (cachedResponse) {
-          console.log("Using cached response");
-          const data = JSON.parse(cachedResponse);
-          setHoroscope(data);
-          setLoading(false);
-          return;
+        // Check if data is already initialized in the store
+        if (isDataInitialized()) {
+          // Get data from the store based on character type
+          const data = isMotivator
+            ? getStoredMotivatorData()
+            : getStoredRoasterData();
+          if (data) {
+            setHoroscope(data);
+            setLoading(false);
+            return;
+          }
         }
 
-        // No cache, fetch from API
-        console.log("Fetching from API");
-        const data = await getHoroscope(sign, name);
-        setHoroscope(data);
+        // If we don't have data, fetch it
+        await fetchAllHoroscopeData(sign, name);
 
-        // Cache the response
-        localStorage.setItem(cacheKey, JSON.stringify(data));
+        // Try again to get from store after fetching
+        const data = isMotivator
+          ? getStoredMotivatorData()
+          : getStoredRoasterData();
+        if (data) {
+          setHoroscope(data);
+        } else {
+          throw new Error("Failed to load character data");
+        }
 
         setLoading(false);
       } catch (err) {
@@ -81,7 +93,7 @@ export default function CharacterPage() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [sign, name, isMotivator, cacheKey]);
+  }, [sign, name, isMotivator]);
 
   // Simple text typing animation without any complex DOM manipulations
   useEffect(() => {

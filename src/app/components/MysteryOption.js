@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { isDataInitialized } from "../api/dataStore";
 
 export default function MysteryOption({ userData, onBack }) {
   const [loading, setLoading] = useState(false);
@@ -19,6 +20,13 @@ export default function MysteryOption({ userData, onBack }) {
         localStorage.setItem("fortuneUserData", JSON.stringify(userData));
       } catch (e) {
         console.error("Failed to save user data to localStorage", e);
+      }
+
+      // Verify that data is initialized before navigating
+      if (!isDataInitialized()) {
+        throw new Error(
+          "Please go back and try again. Your cosmic data is not ready."
+        );
       }
 
       // Add a small delay to show the loading animation

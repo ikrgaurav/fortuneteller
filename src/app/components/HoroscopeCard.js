@@ -1,32 +1,51 @@
 "use client";
 import { useState, useEffect } from "react";
-import { getHoroscope } from "../api/horoscopeService";
+import {
+  getStoredHoroscopeData,
+  isDataInitialized,
+  fetchAllHoroscopeData,
+} from "../api/dataStore";
 
 export default function HoroscopeCard({ userData, onBack }) {
   const [horoscope, setHoroscope] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [show, setShow] = useState(true);
-
-  const fetchHoroscope = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getHoroscope(userData.sign, userData.name);
-      setHoroscope(data);
-    } catch (err) {
-      setError("Failed to fetch your horoscope. " + err.message);
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    if (show) {
-      fetchHoroscope();
-    }
-  }, [show, fetchHoroscope]);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Check if data is already initialized in the store
+        if (isDataInitialized()) {
+          // Use data from the store
+          const storedData = getStoredHoroscopeData();
+          if (storedData) {
+            setHoroscope(storedData);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // If data is not available, fetch it
+        await fetchAllHoroscopeData(userData.sign, userData.name);
+        const storedData = getStoredHoroscopeData();
+        if (storedData) {
+          setHoroscope(storedData);
+        } else {
+          throw new Error("Failed to load horoscope data");
+        }
+      } catch (err) {
+        setError("Failed to fetch your horoscope. " + err.message);
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userData]);
 
   if (loading) {
     return (
@@ -49,7 +68,7 @@ export default function HoroscopeCard({ userData, onBack }) {
         <p className="mb-6 neon-text-blue">{error}</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            onClick={fetchHoroscope}
+            onClick={() => fetchAllHoroscopeData(userData.sign, userData.name)}
             className="glass-button py-2 px-4 neon-text-cyan font-medium rounded-lg"
           >
             Try Again
