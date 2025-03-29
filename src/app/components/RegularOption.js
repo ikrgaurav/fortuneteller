@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -10,41 +10,71 @@ export default function RegularOption({ userData, onBack }) {
   const router = useRouter();
   const cacheKey = `regular_fortune_${userData.sign}`;
 
-  const fetchHoroscope = async () => {
-    setIsLoading(true);
-    setError(null);
+  // Use useCallback to prevent recreation of this function on each render
+  const fetchHoroscope = useCallback(
+    async (forceRefresh = false) => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      // Check cache first
-      const cachedResponse = localStorage.getItem(cacheKey);
-      if (cachedResponse) {
-        console.log("Using cached response for regular horoscope");
-        setHoroscope(JSON.parse(cachedResponse));
+      try {
+        // Check cache first (unless force refresh)
+        if (!forceRefresh) {
+          const cachedResponse = localStorage.getItem(cacheKey);
+          if (cachedResponse) {
+            console.log("Using cached response for regular horoscope");
+            setHoroscope(JSON.parse(cachedResponse));
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // No cache or force refresh requested, fetch from API
+        console.log("Fetching regular horoscope from API");
+        const response = await fetch(
+          `https://awanfortune.herokuapp.com/fortune/${userData.sign}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch horoscope");
+        }
+
+        const data = await response.json();
+        const fortune = data.fortune;
+
+        // Cache the response
+        localStorage.setItem(cacheKey, JSON.stringify(fortune));
+
+        // Update state with the new data
+        setHoroscope(fortune);
+      } catch (err) {
+        console.error("Error fetching horoscope:", err);
+        setError("Could not retrieve your horoscope at this time.");
+      } finally {
         setIsLoading(false);
-        return;
       }
+    },
+    [cacheKey, userData.sign]
+  );
 
-      // No cache, fetch from API
-      console.log("Fetching regular horoscope from API");
-      const response = await fetch(
-        `https://awanfortune.herokuapp.com/fortune/${userData.sign}`
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch horoscope");
+  // Check for cached data on component mount
+  useEffect(() => {
+    // Try to load from cache on initial render only if no horoscope is set
+    if (!horoscope && !isLoading) {
+      try {
+        const cachedResponse = localStorage.getItem(cacheKey);
+        if (cachedResponse) {
+          console.log("Loading cached horoscope on initial render");
+          setHoroscope(JSON.parse(cachedResponse));
+        }
+      } catch (err) {
+        console.error("Error loading cached horoscope:", err);
       }
-
-      const data = await response.json();
-      setHoroscope(data.fortune);
-
-      // Cache the response
-      localStorage.setItem(cacheKey, JSON.stringify(data.fortune));
-    } catch (err) {
-      console.error("Error fetching horoscope:", err);
-      setError("Could not retrieve your horoscope at this time.");
-    } finally {
-      setIsLoading(false);
     }
+  }, [cacheKey, horoscope, isLoading]);
+
+  const handleNewReading = () => {
+    // Force a refresh from the API
+    fetchHoroscope(true);
   };
 
   const handleGoBack = () => {
@@ -76,7 +106,7 @@ export default function RegularOption({ userData, onBack }) {
       {!horoscope && !isLoading && !error && (
         <div className="text-center">
           <button
-            onClick={fetchHoroscope}
+            onClick={() => fetchHoroscope(false)}
             className="glass-button py-2 px-6 rounded-lg neon-text-white hover:neon-text-white transition duration-200 button-pulse"
           >
             Reveal Your Horoscope
@@ -101,7 +131,7 @@ export default function RegularOption({ userData, onBack }) {
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
           <button
-            onClick={fetchHoroscope}
+            onClick={() => fetchHoroscope(false)}
             className="glass-button py-2 px-6 rounded-lg neon-text-white hover:neon-text-white transition duration-200 button-pulse"
           >
             Try Again
@@ -109,14 +139,14 @@ export default function RegularOption({ userData, onBack }) {
         </div>
       )}
 
-      {horoscope && (
+      {horoscope && !isLoading && (
         <div className="animate-fadeIn">
           <p className="text-lg mb-6 plain-white-text leading-relaxed text-center">
             {horoscope}
           </p>
           <div className="text-center">
             <button
-              onClick={fetchHoroscope}
+              onClick={handleNewReading}
               className="glass-button py-2 px-6 rounded-lg neon-text-white hover:neon-text-white transition duration-200 button-pulse mr-4"
             >
               New Reading
