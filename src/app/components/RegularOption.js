@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -8,19 +8,37 @@ export default function RegularOption({ userData, onBack }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const router = useRouter();
+  const cacheKey = `regular_fortune_${userData.sign}`;
 
   const fetchHoroscope = async () => {
     setIsLoading(true);
     setError(null);
+
     try {
+      // Check cache first
+      const cachedResponse = localStorage.getItem(cacheKey);
+      if (cachedResponse) {
+        console.log("Using cached response for regular horoscope");
+        setHoroscope(JSON.parse(cachedResponse));
+        setIsLoading(false);
+        return;
+      }
+
+      // No cache, fetch from API
+      console.log("Fetching regular horoscope from API");
       const response = await fetch(
         `https://awanfortune.herokuapp.com/fortune/${userData.sign}`
       );
+
       if (!response.ok) {
         throw new Error("Failed to fetch horoscope");
       }
+
       const data = await response.json();
       setHoroscope(data.fortune);
+
+      // Cache the response
+      localStorage.setItem(cacheKey, JSON.stringify(data.fortune));
     } catch (err) {
       console.error("Error fetching horoscope:", err);
       setError("Could not retrieve your horoscope at this time.");
@@ -68,7 +86,11 @@ export default function RegularOption({ userData, onBack }) {
 
       {isLoading && (
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
+          <div className="w-16 h-16 relative mx-auto mb-4">
+            <div className="absolute inset-0 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+            <div className="absolute inset-3 border-4 border-white/30 border-b-white rounded-full animate-spin-reverse"></div>
+            <div className="absolute inset-6 bg-white/10 rounded-full animate-pulse"></div>
+          </div>
           <p className="mt-4 neon-text-white animate-pulse">
             Consulting the stars...
           </p>
