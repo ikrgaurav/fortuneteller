@@ -135,14 +135,22 @@ export default function CharacterPage() {
   if (loading) {
     return (
       <div className="min-h-screen cosmic-sparkle flex items-center justify-center p-4">
+        {/* YouTube Background */}
+        <YouTubeBackground />
+
         <div className="glass-card p-8 w-full max-w-lg text-center">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-white/10 rounded w-3/4 mx-auto"></div>
-            <div className="h-4 bg-white/10 rounded w-5/6 mx-auto"></div>
-            <div className="h-4 bg-white/10 rounded w-2/3 mx-auto"></div>
-            <div className="h-4 bg-white/10 rounded w-4/5 mx-auto"></div>
+          <div className="flex flex-col items-center justify-center mb-6">
+            <div className="w-20 h-20 relative mb-6">
+              {/* Spinning cosmic loader */}
+              <div className="absolute inset-0 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+              <div className="absolute inset-3 border-4 border-white/30 border-b-white rounded-full animate-spin-reverse"></div>
+              <div className="absolute inset-6 bg-white/10 rounded-full animate-pulse"></div>
+            </div>
+            <h2 className="text-2xl font-bold mb-4 neon-text-white animate-pulse">
+              Cosmic Connection
+            </h2>
           </div>
-          <p className="mt-8 neon-text-white animate-pulse text-center">
+          <p className="neon-text-white animate-pulse text-center">
             {characterTitle} is reading your stars...
           </p>
         </div>

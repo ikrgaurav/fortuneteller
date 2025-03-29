@@ -21,6 +21,9 @@ export default function MysteryOption({ userData, onBack }) {
         console.error("Failed to save user data to localStorage", e);
       }
 
+      // Add a small delay to show the loading animation
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Navigate to the character page with user data as query params
       router.push(
         `/character/${character}?type=${character}&name=${encodeURIComponent(
@@ -89,6 +92,16 @@ export default function MysteryOption({ userData, onBack }) {
                 priority
               />
             </div>
+
+            {/* Loading overlay for motivator */}
+            {loading && selectedCharacter === "motivator" && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm rounded-lg">
+                <div className="inline-block w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
+                <p className="neon-text-white text-center animate-pulse">
+                  Connecting to cosmic forces...
+                </p>
+              </div>
+            )}
           </div>
           <div className="mt-3 text-center">
             <h3 className="font-medium text-lg neon-text-white">
@@ -120,6 +133,16 @@ export default function MysteryOption({ userData, onBack }) {
                 priority
               />
             </div>
+
+            {/* Loading overlay for roaster */}
+            {loading && selectedCharacter === "roaster" && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm rounded-lg">
+                <div className="inline-block w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
+                <p className="neon-text-white text-center animate-pulse">
+                  Connecting to cosmic forces...
+                </p>
+              </div>
+            )}
           </div>
           <div className="mt-3 text-center">
             <h3 className="font-medium text-lg neon-text-white">The Roaster</h3>
@@ -132,6 +155,7 @@ export default function MysteryOption({ userData, onBack }) {
         <button
           onClick={onBack}
           className="glass-button py-2 px-6 rounded-lg neon-text-white hover:neon-text-white transition duration-200 button-pulse"
+          disabled={loading}
         >
           Back
         </button>
