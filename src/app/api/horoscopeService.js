@@ -3,7 +3,7 @@ import axios from "axios";
 const API_URL = "https://fortune-teller-api-kgm-114b9adacc3a.herokuapp.com";
 
 // Helper function to retry requests with delay
-const retryRequest = async (fn, retriesLeft = 2, interval = 1500) => {
+const retryRequest = async (fn, retriesLeft = 10, interval = 1500) => {
   try {
     return await fn();
   } catch (error) {
